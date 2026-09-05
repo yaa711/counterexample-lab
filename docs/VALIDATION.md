@@ -31,7 +31,7 @@ docker build -t counterexample-lab-runner:1 runner
 LAB_DOCKER_TESTS=1 python3 -m unittest discover -s tests -v
 ```
 
-The checked-in GitHub Actions workflow also includes a Docker stage, but it has not run on GitHub and no remote CI success is claimed.
+The checked-in GitHub Actions workflow also includes a Docker stage. See [GitHub Actions](https://github.com/yaa711/counterexample-lab/actions) for results associated with each commit; the local checks recorded above are separate from those runs.
 
 No real model-repair experiment has been performed. All displayed demo candidates are explicitly hand-authored teaching examples. Correct-example validation proves the application workflow on these tests, not a research finding about model performance.
 

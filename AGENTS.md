@@ -38,4 +38,4 @@ This is an English-only local research workbench, not a public hosted service. D
 
 Run relevant tests for changed modules and the frontend build when UI/types change. Real Docker checks require an installed daemon/image; report skipped tests honestly, never imply they ran. Inspect desktop/mobile UI when changing layout. Update `docs/VALIDATION.md` with actual evidence and limits, not assumptions.
 
-Use the checked-in lockfile. No external skills are required to run this project. The original design is in `docs/superpowers/specs/`; the approved implementation plan is in `docs/superpowers/plans/`.
+Use the checked-in lockfile. No external skills are required to run this project.
