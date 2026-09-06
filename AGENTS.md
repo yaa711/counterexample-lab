@@ -1,6 +1,6 @@
-# Counterexample Lab agent instructions
+# Find My Bug agent instructions
 
-This is an English-only local research workbench, not a public hosted service. Do not add Chinese UI or a language switcher; the user explicitly canceled bilingual UI. Chinese learning documentation may remain. Continue from existing code; preserve the distinction between trusted teaching examples and arbitrary user Python.
+This is an English-only local Python practice tool for beginners, with research tools under expandable details. It is not a public code-execution service. Do not add Chinese UI or a language switcher; the user explicitly canceled bilingual UI. Chinese learning documentation may remain. Continue from existing code; preserve the distinction between trusted teaching examples and arbitrary user Python.
 
 ## Commands
 
@@ -48,3 +48,9 @@ Use the checked-in lockfile. No external skills are required to run this project
 - Keep misses, controls, incomplete runs and budget limits in saved reports. Do not infer global minimality or general performance from the pilot.
 - Browser tests start their own server; set `LAB_TEST_PORT` if port 8765 is occupied.
 - Run a smoke comparison: `python3 -m benchmarks.compare --only sort-drop-last sort-control --seeds 42 --count 4 --budget 10 --output artifacts/smoke.json`.
+
+## Beginner workflow
+
+- Default flow: write code, inspect a small failing input, edit the failed source, and check the fix. Keep research settings collapsed.
+- Regression checks of displayed failures are reported separately from unseen-input counts. Never label exposed inputs as held out.
+- Preserve the original README screenshot and its reference when updating branding.

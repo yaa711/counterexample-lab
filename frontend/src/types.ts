@@ -85,6 +85,7 @@ export type Report = {
   created_at: string;
 };
 export type Verification = {
+  regression: Failure | null;
   run_id: string;
   status: Status;
   seed: number;

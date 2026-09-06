@@ -83,10 +83,10 @@ export function Workbench({
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <a href="/" className="brand" aria-label="Counterexample Lab home">
+        <a href="/" className="brand" aria-label="Find My Bug home">
           <span className="brand-mark">[·]</span>
           <span>
-            Counterexample<span className="brand-sub">LAB / CODE RESEARCH</span>
+            Find My Bug<span className="brand-sub">PYTHON PRACTICE</span>
           </span>
         </a>
         <div className="workspace-label">
@@ -128,16 +128,16 @@ export function Workbench({
         <div className="sidebar-bottom">
           <div className="research-note">
             <Icon name="layers" />
-            <strong>Start with one counterexample</strong>
+            <strong>A small example can help</strong>
             <p>
-              Find the failure. Reduce the input.
+              Find an input your code misses.
               <br />
-              Understand why the code breaks.
+              Make a change. Check it again.
             </p>
           </div>
           <div className="version">
             <span>v{health.version}</span>
-            <span>OPEN RESEARCH</span>
+            <span>LEARN BY TESTING</span>
           </div>
         </div>
       </aside>
@@ -158,41 +158,40 @@ export function Workbench({
           <div className="page-content">
             <div className="page-heading">
               <div>
-                <div className="eyebrow">PYTHON ALGORITHM TESTING</div>
-                <h1>Find and reduce failing inputs</h1>
-                <p>
-                  Compare expected and actual outputs, then inspect how the
-                  failing input gets smaller.
-                </p>
+                <div className="eyebrow">
+                  PRACTICE WITH THREE PYTHON PROBLEMS
+                </div>
+                <h1>Find the input that breaks your code.</h1>
+                <p>Try an example, spot the difference, and check your fix.</p>
               </div>
               <button
                 className="secondary export-button"
                 disabled={!report || busy}
                 onClick={() =>
                   report &&
-                  download(`counterexample-${report.run_id.slice(0, 8)}.json`, {
+                  download(`find-my-bug-${report.run_id.slice(0, 8)}.json`, {
                     ...report,
                     verification,
                   })
                 }
               >
-                <Icon name="download" /> Export experiment
+                <Icon name="download" /> Export results
               </button>
             </div>
 
             <div className="pipeline">
               <div className="pipeline-step current">
-                <span>01</span> Define
+                <span>01</span> Write code
               </div>
               <i />
               <div className={`pipeline-step ${report ? "current" : ""}`}>
-                <span>02</span> Find & reduce
+                <span>02</span> Find a failing case
               </div>
               <i />
               <div className={`pipeline-step ${verification ? "current" : ""}`}>
-                <span>03</span> Verify repair
+                <span>03</span> Check your fix
               </div>
-              <small>Reproducible · Inspectable · Exportable</small>
+              <small>Start with the example below</small>
             </div>
 
             <section className="task-overview">
@@ -206,7 +205,16 @@ export function Workbench({
                 </div>
               </div>
               <p>{task.description}</p>
-              <span className="course-tag">{task.level}</span>
+              <div className="problem-example">
+                <strong>Example</strong>
+                <code>
+                  {task.id === "sort"
+                    ? "[3, 1, 3] → [1, 3, 3]"
+                    : task.id === "first_index"
+                      ? "[1, 3, 3], target = 3 → 1 (indexes start at 0)"
+                      : "[-2, 3, -1, 2] → 4 (from [3, -1, 2])"}
+                </code>
+              </div>
             </section>
 
             {error ? (
@@ -222,7 +230,7 @@ export function Workbench({
               <section className="panel code-panel">
                 <div className="panel-heading">
                   <h2>
-                    <Icon name="terminal" /> Candidate code
+                    <Icon name="terminal" /> 1. Your code
                   </h2>
                   <span className="language-tag">Python 3</span>
                 </div>
@@ -234,7 +242,7 @@ export function Workbench({
                       aria-pressed={mode === "demo"}
                       onClick={() => setMode("demo")}
                     >
-                      Built-in demo
+                      Try an example
                     </button>
                     <button
                       disabled={busy}
@@ -261,7 +269,19 @@ export function Workbench({
                       <option value="correct">Correct example</option>
                     </select>
                   ) : (
-                    <span className="muted">Isolated with Docker</span>
+                    <button
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() =>
+                        setCode(
+                          task.id === "first_index"
+                            ? "def solve(numbers, target):\n    # Return the first matching index, or -1.\n    pass\n"
+                            : `def solve(numbers):\n    # ${task.description}\n    pass\n`,
+                        )
+                      }
+                    >
+                      Use starter code
+                    </button>
                   )}
                 </div>
                 <div className="file-tab">
@@ -285,7 +305,7 @@ export function Workbench({
                   />
                 </div>
                 <div className="contract">
-                  <span>CONTRACT</span>
+                  <span>FUNCTION</span>
                   <code>{task.signature}</code>
                 </div>
                 <div className="editor-footer">
@@ -294,7 +314,7 @@ export function Workbench({
                   />
                   <span>
                     {mode === "demo"
-                      ? "Hand-authored demo \u00B7 runs a fixed trusted function"
+                      ? "Example code · Choose Your code to edit it"
                       : health.runner.reason}
                   </span>
                   {mode === "custom" ? (
@@ -308,105 +328,99 @@ export function Workbench({
               <section className="panel config-panel">
                 <div className="panel-heading">
                   <h2>
-                    <Icon name="flask" /> Experiment settings
+                    <Icon name="flask" /> Ready to test?
                   </h2>
-                  <span className="muted mono">CONFIG</span>
+                  <span className="muted">Step 2</span>
                 </div>
                 <div className="config-body">
-                  <label htmlFor="strategy">Reduction strategy</label>
-                  <select
-                    id="strategy"
-                    value={strategy}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setStrategy(e.target.value as "single" | "block")
-                    }
-                  >
-                    <option value="single">
-                      Single deletion + value simplification
-                    </option>
-                    <option value="block">
-                      Block deletion + value simplification
-                    </option>
-                  </select>
-                  <p className="field-help">
-                    Both strategies use the same value transformations and
-                    failure checks.
+                  <p>
+                    Find an input where your answer differs from the expected
+                    answer. No settings needed to try the example.
                   </p>
-                  <label htmlFor="profile">Input generation</label>
-                  <select
-                    id="profile"
-                    value={profile}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setProfile(e.target.value as "demo" | "evaluation")
-                    }
-                  >
-                    <option value="demo">Teaching demo</option>
-                    <option value="evaluation">Evaluation</option>
-                  </select>
-                  <p className="field-help">
-                    Evaluation uses seeded random inputs and generic boundaries,
-                    without the teaching examples.
-                  </p>
-                  <label htmlFor="seed">
-                    Random seed <span>SEED</span>
-                  </label>
-                  <input
-                    id="seed"
-                    type="number"
-                    min="0"
-                    max="4294967295"
-                    value={seed}
-                    disabled={busy}
-                    onChange={(e) => setSeed(e.target.value)}
-                  />
-                  <p className="field-help">
-                    Same seed. Same generated inputs.
-                  </p>
-                  <div className="number-fields">
-                    <div>
-                      <label htmlFor="count">Search budget</label>
-                      <input
-                        id="count"
-                        type="number"
-                        min="1"
-                        max="500"
-                        disabled={busy}
-                        value={count}
-                        onChange={(e) => setCount(e.target.value)}
-                      />
+                  <details className="advanced-settings">
+                    <summary>Advanced settings</summary>
+                    <label htmlFor="strategy">Reduction strategy</label>
+                    <select
+                      id="strategy"
+                      value={strategy}
+                      disabled={busy}
+                      onChange={(e) =>
+                        setStrategy(e.target.value as "single" | "block")
+                      }
+                    >
+                      <option value="single">
+                        Single deletion + value simplification
+                      </option>
+                      <option value="block">
+                        Block deletion + value simplification
+                      </option>
+                    </select>
+                    <p className="field-help">
+                      Both strategies use the same value transformations and
+                      failure checks.
+                    </p>
+                    <label htmlFor="profile">Input generation</label>
+                    <select
+                      id="profile"
+                      value={profile}
+                      disabled={busy}
+                      onChange={(e) =>
+                        setProfile(e.target.value as "demo" | "evaluation")
+                      }
+                    >
+                      <option value="demo">Teaching demo</option>
+                      <option value="evaluation">Evaluation</option>
+                    </select>
+                    <p className="field-help">
+                      Evaluation uses seeded random inputs and generic
+                      boundaries, without the teaching examples.
+                    </p>
+                    <label htmlFor="seed">
+                      Random seed <span>SEED</span>
+                    </label>
+                    <input
+                      id="seed"
+                      type="number"
+                      min="0"
+                      max="4294967295"
+                      value={seed}
+                      disabled={busy}
+                      onChange={(e) => setSeed(e.target.value)}
+                    />
+                    <p className="field-help">
+                      Same seed. Same generated inputs.
+                    </p>
+                    <div className="number-fields">
+                      <div>
+                        <label htmlFor="count">Search budget</label>
+                        <input
+                          id="count"
+                          type="number"
+                          min="1"
+                          max="500"
+                          disabled={busy}
+                          value={count}
+                          onChange={(e) => setCount(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="budget">Reduction budget</label>
+                        <input
+                          id="budget"
+                          type="number"
+                          min="0"
+                          max="500"
+                          disabled={busy}
+                          value={budget}
+                          onChange={(e) => setBudget(e.target.value)}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label htmlFor="budget">Reduction budget</label>
-                      <input
-                        id="budget"
-                        type="number"
-                        min="0"
-                        max="500"
-                        disabled={busy}
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <p className="field-help">
-                    Maximum evaluations: 1–500 for search, 0–500 for reduction.
-                  </p>
-                  <div className="config-checks">
-                    <span>
-                      <Icon name="check" size={15} /> Independent reference
-                      implementation
-                    </span>
-                    <span>
-                      <Icon name="check" size={15} /> Contract-preserving input
-                      reduction
-                    </span>
-                    <span>
-                      <Icon name="check" size={15} /> Fixed seeds and a complete
-                      audit trail
-                    </span>
-                  </div>
+                    <p className="field-help">
+                      Maximum evaluations: 1–500 for search, 0–500 for
+                      reduction.
+                    </p>
+                  </details>
                   <button
                     className="primary run-button"
                     disabled={!canRun}
@@ -414,11 +428,11 @@ export function Workbench({
                   >
                     {busy ? (
                       <>
-                        <span className="spinner" /> Running experiment…
+                        <span className="spinner" /> Finding a failing case…
                       </>
                     ) : (
                       <>
-                        <Icon name="play" /> Run experiment{" "}
+                        <Icon name="play" /> Find a failing case{" "}
                         <span className="button-arrow">↗</span>
                       </>
                     )}
@@ -437,7 +451,7 @@ export function Workbench({
                     <p className="run-caption">
                       {busy
                         ? "Executing real tests. Custom code may take about a minute."
-                        : "Reduction starts automatically after the first failure."}
+                        : "We look for a wrong answer, then try to make the input smaller."}
                     </p>
                   )}
                 </div>
@@ -459,7 +473,8 @@ export function Workbench({
                 How it works ↗
               </button>
               <span>
-                Finite tests are not a proof. Keep every conclusion in context.
+                Passing these tests does not mean your code works for every
+                input.
               </span>
             </footer>
           </div>
@@ -471,27 +486,28 @@ export function Workbench({
 function Guide({ onBack }: { onBack: () => void }) {
   return (
     <div className="page-content guide">
-      <div className="eyebrow">THE METHOD</div>
-      <h1>Understand before you trust.</h1>
+      <div className="eyebrow">GETTING STARTED</div>
+      <h1>A small input makes a bug easier to see.</h1>
       <p className="guide-intro">
-        Three inspectable steps connect the workflow. You can study
-        model-generated code without knowing the internals of the model.
+        Practice sorting, binary search, and maximum subarray problems in
+        Python. Start with a built-in example; editing and running your own code
+        requires Docker.
       </p>
       {[
         [
           "01",
-          "Differential testing",
-          "Give the same input to the candidate and an independent reference. Different answers reveal a counterexample. Sorting preserves duplicates; search returns the first match; the maximum subarray must be non-empty.",
+          "Read the problem and try some code",
+          "Use the example to get started, or choose Your code and fill in the solve function. Check the problem's rules and example output first.",
         ],
         [
           "02",
-          "Counterexample reduction",
-          "Delete chunks, then individual elements, then simplify values toward zero. Accept a change only if the input remains valid, its size measure strictly decreases, and the error repeats. This is local reduction, not a guarantee of a global minimum.",
+          "Compare the answers",
+          "Click Find a failing case. If we find a wrong answer, we try smaller inputs that still fail. Compare Expected with Your output. The result is a useful small example, not necessarily the smallest possible one.",
         ],
         [
           "03",
-          "Held-out verification",
-          "Test the repair using a different seed and exclude all inputs seen during discovery and reduction. Passing means only that these tests found no errors. Repeated verification reuses the same set, so do not tune against it.",
+          "Make a change and check your fix",
+          "Edit the failed code in the fix editor. We check the displayed failure again, then test other inputs you have not seen. Passing tests does not prove your solution works for every input.",
         ],
       ].map(([n, title, text]) => (
         <article className="guide-card" key={n}>
@@ -502,25 +518,13 @@ function Guide({ onBack }: { onBack: () => void }) {
           </div>
         </article>
       ))}
-      <div className="guide-card">
-        <Icon name="book" size={28} />
-        <div>
-          <h2>How does this become a research project?</h2>
-          <p>
-            Compare failure-only, full-input and reduced-input feedback. Fix the
-            model version, candidate and generation settings. Use a fresh model
-            conversation for each condition and retain every result. See
-            docs/EXPERIMENTS.md for the protocol.
-          </p>
-          <p>
-            Built-in examples teach and validate the tool; they are not a model
-            benchmark. The app does not call a model automatically or fabricate
-            repairs.
-          </p>
-        </div>
-      </div>
+      <p>
+        Curious about the algorithm? Open the test details after a run. The
+        repository also includes paired reduction experiments and their
+        limitations.
+      </p>
       <button className="primary" onClick={onBack}>
-        Start experimenting <Icon name="arrow" />
+        Try an example <Icon name="arrow" />
       </button>
     </div>
   );

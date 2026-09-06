@@ -32,7 +32,7 @@ export function App() {
     return (
       <main className="loading-page">
         <div className="brand-mark">[·]</div>
-        <h1>Counterexample Lab</h1>
+        <h1>Find My Bug</h1>
         {error ? (
           <>
             <p role="alert">{error}</p>

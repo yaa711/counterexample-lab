@@ -39,6 +39,11 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(result['status'], 'passed')
         self.assertEqual(result['overlap_count'], 0)
+        self.assertEqual(result['regression']['status'], 'passed')
+        self.assertEqual(result['regression']['input'], report['shrink']['reduced']['input'])
+        self.assertNotIn(result['regression']['input'], result['tested_inputs'])
+        _, broken = self.request('/api/verify', {'run_id': report['run_id'], 'variant': 'buggy'})
+        self.assertEqual(broken['regression']['status'], 'wrong_answer')
 
     def test_strategy_profile_and_zero_reduction_budget(self):
         status, report = self.request('/api/run', {'task': 'sort', 'strategy': 'single', 'profile': 'evaluation'})
