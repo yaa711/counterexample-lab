@@ -1,8 +1,8 @@
-# Counterexample Lab
+# Find My Bug
 
-Counterexample Lab tests small Python algorithms against reference implementations. When an output is wrong, it tries to simplify the input while keeping the failure, so there is less to inspect.
+Find My Bug helps you find a small input that your Python code gets wrong. Compare the expected answer with your output, change your code, and check the fix.
 
-The web interface shows the original failure and the steps taken to reduce it. You can also paste a repaired function, check it on held-out inputs, and export the experiment as JSON.
+It currently supports three practice problems: sorting, binary search, and maximum subarray. Built-in examples work without Docker; running your own code needs Docker.
 
 ![Counterexample Lab workbench](docs/images/workbench.png)
 
@@ -19,15 +19,15 @@ For `[0, 0]`, the expected result is `[0, 0]`. The function returns `[0]`.
 
 The sorting demo uses this bug to show how reduction works. Removing either element makes the test pass, so the remaining pair makes the problem easy to explain.
 
-This duplicate-removal example also appears in the [Hypothesis README](https://github.com/HypothesisWorks/hypothesis#readme). Counterexample Lab implements its own task-specific test generation and reduction logic.
+This duplicate-removal example also appears in the [Hypothesis README](https://github.com/HypothesisWorks/hypothesis#readme). Find My Bug implements its own task-specific test generation and reduction logic.
 
 ## Run locally
 
 You need Python 3.11+ and Node.js 22.12+ with npm.
 
 ```sh
-git clone https://github.com/yaa711/counterexample-lab.git
-cd counterexample-lab
+git clone https://github.com/yaa711/find-my-bug.git
+cd find-my-bug
 
 npm --prefix frontend ci
 npm --prefix frontend run build
@@ -39,9 +39,9 @@ Open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 The Python backend uses the standard library. You can try the built-in examples without Docker:
 
 1. Select **Array sorting** and the buggy built-in example.
-2. Click **Run experiment**.
-3. Compare the expected and actual outputs, then inspect the reduction steps.
-4. Try the correct demo to check the repair-verification workflow.
+2. Click **Find a failing case**.
+3. Compare **Expected** with **Your output** in the failing example.
+4. Select **Show a working example**, then **Check your fix** to try the checking workflow without Docker.
 
 ## Test your own code
 
@@ -75,9 +75,9 @@ The reference implementations favor simplicity. For example, the maximum-subarra
 
 ## Compare reduction strategies
 
-The settings panel offers single-element deletion and block deletion. Both use the same value simplification and failure-confirmation rules. Choose **Evaluation** to generate seeded inputs without the long teaching examples. The result records the strategy actually executed, even if you change the settings afterward.
+Open **Advanced settings** to choose single-element deletion or block deletion. Both use the same value simplification and failure-confirmation rules. Choose **Evaluation** to generate seeded inputs without the long teaching examples. The result records the strategy actually executed, even if you change the settings afterward.
 
-Expand **All reduction attempts** to inspect accepted proposals, rejected outputs, skipped inputs, and confirmation calls. The trace also records complexity before and after reduction. It describes the reducer's decisions, not individual lines of candidate code.
+Open **Test details and how the input got smaller**, then expand **All reduction attempts** to inspect accepted proposals, rejected outputs, skipped inputs, and confirmation calls. The trace also records complexity before and after reduction. It describes the reducer's decisions, not individual lines of candidate code.
 
 For a paired comparison from the same initial failure, use the Docker benchmark:
 
@@ -92,15 +92,13 @@ See the [method, limitations, and raw results](benchmarks/README.md) before inte
 
 ## Checking a repair
 
-After finding a failure, the interface prepares three kinds of feedback:
+The fix editor starts with the code from your last run. Edit it and click **Check your fix**. The app rechecks the displayed failing input, then runs a separate set of unseen inputs. Those results are reported separately: passing the old example alone does not mean the fix works elsewhere.
 
-- A message that the code failed a test.
-- The original failing input with expected and actual outputs.
-- The reduced input with expected and actual outputs.
+Your edited code runs in Docker. **Show a working example** runs the built-in correct function instead and keeps your draft intact.
 
-You can copy a prompt into a separate LLM conversation and paste the proposed repair back into the app. The app does not make model API calls.
+The unseen set excludes inputs used during discovery and reduction. Repeating a check on the same run reuses that set, so it is not fresh evidence after repeated attempts to tune a fix.
 
-Verification uses inputs that were not exposed during discovery or reduction. Repeating verification on the same experiment reuses that set, so it should not be treated as fresh evidence after repeated attempts to tune a repair.
+Optional copyable prompts are under **Copy feedback for an AI assistant**. The app does not make model API calls.
 
 The built-in candidates are teaching examples. No model-repair study is included yet. The [experiment protocol](docs/EXPERIMENTS.md) describes how to compare feedback conditions across independently generated candidate programs.
 
@@ -108,7 +106,7 @@ Passing the tests does not prove that a function is correct.
 
 ## Exporting results
 
-Use **Export experiment** to save the candidate source, source hash, seeds, tested inputs, reduction steps, feedback prompts, and verification result.
+Use **Export results** to save the candidate source, source hash, seeds, tested inputs, reduction steps, feedback prompts, and verification result.
 
 The server keeps at most 24 reports in memory, with a one-hour lifetime. Export a report before restarting the server or leaving it to expire. This version does not import saved reports.
 
@@ -157,5 +155,4 @@ npm run test:e2e
 - `frontend/src/`: the React and TypeScript interface.
 - `runner/`: the container image and candidate worker.
 - `tests/` and `frontend/e2e/`: backend and browser tests.
-
 - `benchmarks/`: fault fixtures, Docker-only paired experiments, and saved pilot results.

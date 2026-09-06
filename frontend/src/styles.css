@@ -1744,3 +1744,77 @@ h1 > span {
 .attempt-list span {
   font-size: 12px;
 }
+
+/* Keep the first run focused; technical controls remain available on demand. */
+.problem-example {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 13px;
+}
+.problem-example code {
+  white-space: normal;
+}
+.config-body {
+  display: block;
+}
+.config-body > p {
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.advanced-settings {
+  margin: 20px 0;
+}
+.advanced-settings summary,
+.test-details > summary,
+.model-details > summary,
+.thinking-hint summary {
+  cursor: pointer;
+  padding: 14px 0;
+  font-weight: 600;
+}
+.advanced-settings label {
+  margin-top: 18px;
+}
+.advanced-settings input {
+  width: 100%;
+}
+.advanced-settings .number-fields {
+  margin-top: 16px;
+}
+.failing-example {
+  padding: 24px;
+  margin-bottom: 18px;
+}
+.failing-example > p,
+.thinking-hint p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.failing-example .output-pair {
+  margin-top: 18px;
+}
+.test-details,
+.model-details {
+  border-top: 1px solid #deded7;
+  margin-top: 20px;
+}
+.regression-result {
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid #d6d8ce;
+  border-radius: 8px;
+}
+.repair-code {
+  min-height: 190px;
+}
+@media (max-width: 700px) {
+  .failing-example {
+    padding: 18px;
+  }
+  .config-body {
+    display: block;
+  }
+}

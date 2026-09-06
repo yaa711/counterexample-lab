@@ -46,3 +46,10 @@ The strategy comparison update passed 40 Python tests with `LAB_DOCKER_TESTS=1` 
 A Docker-only pilot completed all 24 planned trials. It reproduced all 12 declared fixture witnesses, discovered 16/18 buggy trials, passed all six correct-control trials, and independently audited both reductions in every discovered pair. The raw evidence and limitations are in `benchmarks/README.md`. These numbers are not a model-repair result or a claim about real-world bug distributions.
 
 The browser test server now uses a dedicated port and refuses to reuse an existing server. This prevents a stale local checkout from accidentally satisfying the browser suite. CI also runs a two-program Docker benchmark smoke test and uploads its report.
+
+## Find My Bug beginner workflow — 2026-09-06
+
+- Python/API/Docker suite: 41 tests passed without skips (23.512 seconds). API coverage checks the displayed failure separately and confirms it is excluded from unseen inputs.
+- Frontend: TypeScript/Vite build passed; six browser tests passed, covering collapsed settings, retained repair drafts, working-example checks, exports, error states, and mobile overflow. Desktop and 390px mobile screenshots were inspected locally.
+- README image and its reference are unchanged. Existing pilot results are retained, not rerun or relabeled.
+- This validates the implementation, not its usefulness to beginners. No user study has been conducted yet.

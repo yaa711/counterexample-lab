@@ -11,7 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from .engine import PROFILES, STRATEGIES, discover, verify
+from .engine import PROFILES, STRATEGIES, check, discover, verify
 from .execution import docker_evaluator, readiness
 from .reports import prompts, source_record, timestamp
 from .tasks import TASKS, catalog, demo_evaluator
@@ -177,7 +177,12 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 discovery = self.server.get_report(data.get('run_id'))
                 evaluate, source = candidate(data, discovery['task'])
+                # A visible regression check is separate from the unseen test set.
+                # Never count this already-exposed example as held-out evidence.
+                previous = (discovery['shrink']['reduced'] if discovery['shrink'] else discovery['failure'])
+                regression = check(discovery['task'], evaluate, previous['input']) if previous else None
                 result = verify(discovery['task'], evaluate, discovery, count)
+                result['regression'] = regression
                 result.update({'run_id': discovery['run_id'], 'source': source, 'created_at': timestamp()})
                 self.send_json(result)
         except RequestError as error:

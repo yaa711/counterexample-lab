@@ -11,8 +11,8 @@ import type {
   Verification,
 } from "./types";
 const STATUS: Record<Status, string> = {
-  passed: "Tests passed",
-  wrong_answer: "Wrong answer found",
+  passed: "No errors found in these tests",
+  wrong_answer: "Found a failing case",
   exception: "Execution error",
   timeout: "Execution timed out",
   invalid_output: "Invalid output",
@@ -79,8 +79,10 @@ export function Results({
 }) {
   const [prompt, setPrompt] = useState("reduced");
   const [copied, setCopied] = useState(false);
-  const [repairMode, setRepairMode] = useState<"demo" | "custom">("demo");
-  const [repairCode, setRepairCode] = useState(task.correct);
+  const [repairMode, setRepairMode] = useState<"demo" | "custom">("custom");
+  const [repairCode, setRepairCode] = useState(
+    report?.source.code ?? task.buggy,
+  );
   const [error, setError] = useState("");
   if (!report)
     return (
@@ -93,12 +95,12 @@ export function Results({
         <h2>
           {busy
             ? "Running tests\u2026"
-            : "Run an experiment to inspect a failure."}
+            : "Your failing example will appear here."}
         </h2>
         <p>
           {busy
             ? "Actual results will appear here when the run completes."
-            : "Choose an example and run an experiment to see real tests and reduction steps."}
+            : "Click Find a failing case to test the code above."}
         </p>
         <span className="empty-label">
           Illustration only · No experiment results yet
@@ -148,7 +150,7 @@ export function Results({
     <div className="results" aria-live="polite">
       <div className="results-heading">
         <h2>
-          Experiment results{" "}
+          2. Look at this result{" "}
           <span className="mono">#{report.run_id.slice(0, 8)}</span>
         </h2>
         <span
@@ -157,80 +159,31 @@ export function Results({
           {STATUS[report.status]}
         </span>
       </div>
-      <p className="evidence-note" data-testid="recorded-settings">
-        Recorded strategy:{" "}
-        {report.strategy === "single" ? "Single deletion" : "Block deletion"} +
-        value simplification
-        {" · "}Generator:{" "}
-        {report.profile === "demo" ? "Teaching demo" : "Evaluation"}
-        {" · "}Total candidate calls: {report.candidate_calls} (including
-        failure confirmations).
-      </p>
-      <div className="stats-grid">
-        <Metric
-          label="Inputs tested"
-          value={String(report.tested)}
-          detail={`Budget: ${report.requested} calls`}
-        />
-        <Metric
-          label="Original → reduced size"
-          value={failure ? `${originalSize} → ${finalSize}` : "\u2014"}
-          detail={
-            failure ? `${change}% fewer elements` : "No counterexample found"
-          }
-        />
-        <Metric
-          label="Reduction calls"
-          value={String(reduction?.calls ?? 0)}
-          detail={
-            reduction
-              ? `Budget: ${reduction.budget} calls`
-              : "Reduction not started"
-          }
-        />
-        <Metric
-          label="Elapsed time"
-          value={
-            report.elapsed_ms < 1000
-              ? `${report.elapsed_ms.toFixed(0)} ms`
-              : `${(report.elapsed_ms / 1000).toFixed(1)} s`
-          }
-          detail={`Seed ${report.seed}`}
-        />
-      </div>
-      <p className="evidence-note">
-        Recorded source:{report.source.provenance} ·{" "}
-        {report.source.mode === "demo"
-          ? "fixed trusted function"
-          : "Python code in Docker"}{" "}
-        · SHA-256 {report.source.sha256.slice(0, 12)}. Editing the code above
-        does not change this result.
-      </p>
       {failure ? (
-        <section className="panel comparison">
-          <div className="comparison-half">
-            <div className="eyebrow">BEFORE / ORIGINAL INPUT</div>
-            <InputView value={failure.input} />
-            <ResultPair record={failure} />
+        <section className="panel failing-example">
+          <div className="eyebrow">
+            {reduced
+              ? "A SMALL INPUT THAT STILL FAILS"
+              : "THE INPUT THAT FAILED"}
           </div>
-          <div className="comparison-arrow">
-            <Icon name="arrow" />
-          </div>
-          <div className="comparison-half reduced">
-            <div className="eyebrow">AFTER / REDUCED INPUT</div>
-            {reduced ? (
-              <>
-                <InputView value={reduced.input} />
-                <ResultPair record={reduced} />
-              </>
-            ) : (
-              <p className="muted">
-                Only reproducible wrong answers are reduced.
-                <br />
-                {failure.message}
+          <InputView value={(reduced ?? failure).input} />
+          <ResultPair record={reduced ?? failure} />
+          <p>
+            This result belongs to the code you last ran. Editing your draft
+            does not update it.
+          </p>
+          {report.status === "wrong_answer" ? (
+            <details className="thinking-hint">
+              <summary>A question to think about</summary>
+              <p>
+                {task.id === "sort"
+                  ? "Does your result keep every number, including repeated numbers, in ascending order?"
+                  : task.id === "first_index"
+                    ? "If the target appears more than once, which index does the problem ask for? What if it is absent?"
+                    : "Which consecutive numbers give the largest sum? Remember that the chosen group cannot be empty."}
               </p>
-            )}
-          </div>
+            </details>
+          ) : null}
         </section>
       ) : (
         <div className="panel passed-panel">
@@ -243,129 +196,18 @@ export function Results({
           </p>
         </div>
       )}
-      {reduction ? (
-        <section className="panel trace-panel">
-          <div className="panel-heading">
-            <h2>
-              <Icon name="layers" /> Reduction trace
-            </h2>
-            <span className="trace-state">
-              {STOP[reduction.stop_reason] ?? reduction.stop_reason}
-            </span>
-          </div>
-          <div className="trace-list">
-            {reduction.steps.map((step, i) => (
-              <div className="trace-row" key={i}>
-                <span className="trace-index">
-                  {String(i).padStart(2, "0")}
-                </span>
-                <div className="trace-description">
-                  <strong>{step.reason}</strong>
-                  <InputView value={step.input} compact />
-                </div>
-                <span className="trace-proof">
-                  {i === 0 ? "Original failure" : "Still failing"}
-                </span>
-              </div>
-            ))}
-          </div>
-          <details className="attempt-details">
-            <summary>
-              All reduction attempts ({reduction.attempts.length})
-            </summary>
-            <p className="field-help">
-              Skipped inputs do not consume calls. Accepted reductions have a
-              separate confirmation call. This is an algorithm trace, not a
-              line-by-line code trace.
-            </p>
-            <p>
-              Complexity (length, absolute-value sum including target):{" "}
-              {JSON.stringify(reduction.original_measure)} →{" "}
-              {JSON.stringify(reduction.reduced_measure)}
-            </p>
-            <ol className="attempt-list">
-              {reduction.attempts.map((attempt, index) => (
-                <li key={index}>
-                  <strong>{attempt.decision.replaceAll("_", " ")}</strong>
-                  {" · "}
-                  {attempt.reason}
-                  {" · "}
-                  {attempt.call === null
-                    ? "Skipped"
-                    : `Call ${attempt.call} · ${attempt.elapsed_ms.toFixed(1)} ms`}
-                  <pre>{JSON.stringify(attempt.input)}</pre>
-                  {attempt.status ? (
-                    <span>
-                      {STATUS[attempt.status]} · Expected:{" "}
-                      <Output value={attempt.expected} /> · Actual:{" "}
-                      <Output value={attempt.actual} />
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
-          </details>
-          <div className="trace-footer">
-            {!reduction.stable
-              ? "Stability was not confirmed for this run. "
-              : ""}
-            {reduction.claim}
-          </div>
-        </section>
-      ) : null}
-      {hasPrompts ? (
-        <section className="panel feedback-panel">
-          <div className="panel-heading">
-            <h2>
-              <Icon name="copy" /> Repair feedback for the model
-            </h2>
-            <span className="muted">Copy manually · No API calls</span>
-          </div>
-          <div className="feedback-body">
-            <div className="prompt-tabs" aria-label="Feedback condition">
-              {PROMPTS.filter((item) => report.prompts[item.id]).map((item) => (
-                <button
-                  key={item.id}
-                  className={activePrompt === item.id ? "active" : ""}
-                  aria-pressed={activePrompt === item.id}
-                  onClick={() => {
-                    setPrompt(item.id);
-                    setCopied(false);
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-              <button className="copy-button" onClick={copyPrompt}>
-                <Icon name={copied ? "check" : "copy"} size={15} />{" "}
-                {copied ? "Copied" : "Copy prompt"}
-              </button>
-            </div>
-            <textarea
-              aria-label="Repair prompt"
-              className="prompt-text"
-              readOnly
-              value={report.prompts[activePrompt]}
-            />
-            <p className="field-help">
-              Use a fresh conversation for each condition. Keep the model and
-              settings fixed, and retain all responses.
-            </p>
-          </div>
-        </section>
-      ) : null}
       <section className="panel repair-panel">
         <div className="panel-heading">
           <h2>
-            <Icon name="check" /> Verify repair
+            <Icon name="check" /> 3. Check your fix
           </h2>
-          <span className="muted">100 held-out inputs</span>
+          <span className="muted">Check against 100 unseen inputs</span>
         </div>
         <div className="repair-body">
           <div className="repair-intro">
             <p>
-              A different seed, excluding all inputs seen in search and
-              reduction.
+              Start from the code that failed. Make a change below, then check
+              the failing example and other unseen inputs.
             </p>
             <div className="segmented">
               <button
@@ -374,7 +216,7 @@ export function Results({
                 className={repairMode === "demo" ? "selected" : ""}
                 onClick={() => setRepairMode("demo")}
               >
-                Correct demo
+                Show a working example
               </button>
               <button
                 disabled={busy}
@@ -382,7 +224,7 @@ export function Results({
                 className={repairMode === "custom" ? "selected" : ""}
                 onClick={() => setRepairMode("custom")}
               >
-                Paste repair
+                Edit your fix
               </button>
             </div>
           </div>
@@ -397,7 +239,7 @@ export function Results({
           <div className="repair-actions">
             <span className="muted">
               {repairMode === "demo"
-                ? "Runs a fixed correct function, not an AI-generated repair."
+                ? "This runs the built-in working example. Your edited draft is kept separately."
                 : health.runner.available
                   ? "Your repair will run inside Docker."
                   : "Requires Docker. You can verify the correct demo first."}
@@ -411,7 +253,7 @@ export function Results({
               }
               onClick={verifyRepair}
             >
-              <Icon name="check" /> Verify repair
+              <Icon name="check" /> Check your fix
             </button>
           </div>
           {error ? (
@@ -421,19 +263,39 @@ export function Results({
           ) : null}
           {verification ? (
             <div
-              className={`verification-result ${verification.status === "passed" ? "good" : "bad"}`}
+              className={`verification-result ${verification.status === "passed" && (!verification.regression || verification.regression.status === "passed") ? "good" : "bad"}`}
               role="status"
             >
               <strong>
-                {STATUS[verification.status]} · {verification.passed}/
-                {verification.tested}
+                Unseen inputs: {STATUS[verification.status]} ·{" "}
+                {verification.passed}/{verification.tested}
               </strong>
+              {verification.regression ? (
+                <div className="regression-result">
+                  <strong>
+                    Previous failing example:{" "}
+                    {verification.regression.status === "passed"
+                      ? "passed"
+                      : "still fails"}
+                  </strong>
+                  <InputView value={verification.regression.input} compact />
+                  <ResultPair record={verification.regression} />
+                </div>
+              ) : null}
               <p>
                 Verification seed {verification.seed} · Overlap with prior
                 inputs: {verification.overlap_count} · Requested:{" "}
                 {verification.requested} inputs
               </p>
               <p>{verification.claim}</p>
+              <details>
+                <summary>View the code checked in this result</summary>
+                <pre>{verification.source.code}</pre>
+              </details>
+              <p>
+                This records the last checked code. Editing the fix above does
+                not update these results.
+              </p>
               {verification.failures[0] ? (
                 <details>
                   <summary>Inspect the first verification failure</summary>
@@ -444,6 +306,181 @@ export function Results({
           ) : null}
         </div>
       </section>
+      <details className="test-details">
+        <summary>Test details and how the input got smaller</summary>
+        <p className="evidence-note" data-testid="recorded-settings">
+          Recorded strategy:{" "}
+          {report.strategy === "single" ? "Single deletion" : "Block deletion"}{" "}
+          + value simplification
+          {" · "}Generator:{" "}
+          {report.profile === "demo" ? "Teaching demo" : "Evaluation"}
+          {" · "}Total candidate calls: {report.candidate_calls} (including
+          failure confirmations).
+        </p>
+        <div className="stats-grid">
+          <Metric
+            label="Inputs tested"
+            value={String(report.tested)}
+            detail={`Budget: ${report.requested} calls`}
+          />
+          <Metric
+            label="Original → reduced size"
+            value={failure ? `${originalSize} → ${finalSize}` : "\u2014"}
+            detail={
+              failure ? `${change}% fewer elements` : "No counterexample found"
+            }
+          />
+          <Metric
+            label="Reduction calls"
+            value={String(reduction?.calls ?? 0)}
+            detail={
+              reduction
+                ? `Budget: ${reduction.budget} calls`
+                : "Reduction not started"
+            }
+          />
+          <Metric
+            label="Elapsed time"
+            value={
+              report.elapsed_ms < 1000
+                ? `${report.elapsed_ms.toFixed(0)} ms`
+                : `${(report.elapsed_ms / 1000).toFixed(1)} s`
+            }
+            detail={`Seed ${report.seed}`}
+          />
+        </div>
+        <p className="evidence-note">
+          Recorded source:{report.source.provenance} ·{" "}
+          {report.source.mode === "demo"
+            ? "fixed trusted function"
+            : "Python code in Docker"}{" "}
+          · SHA-256 {report.source.sha256.slice(0, 12)}. Editing the code above
+          does not change this result.
+        </p>
+        {failure ? (
+          <div className="panel failing-example">
+            <div className="eyebrow">ORIGINAL INPUT</div>
+            <InputView value={failure.input} />
+            <ResultPair record={failure} />
+          </div>
+        ) : null}
+        {reduction ? (
+          <section className="panel trace-panel">
+            <div className="panel-heading">
+              <h2>
+                <Icon name="layers" /> Reduction trace
+              </h2>
+              <span className="trace-state">
+                {STOP[reduction.stop_reason] ?? reduction.stop_reason}
+              </span>
+            </div>
+            <div className="trace-list">
+              {reduction.steps.map((step, i) => (
+                <div className="trace-row" key={i}>
+                  <span className="trace-index">
+                    {String(i).padStart(2, "0")}
+                  </span>
+                  <div className="trace-description">
+                    <strong>{step.reason}</strong>
+                    <InputView value={step.input} compact />
+                  </div>
+                  <span className="trace-proof">
+                    {i === 0 ? "Original failure" : "Still failing"}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <details className="attempt-details">
+              <summary>
+                All reduction attempts ({reduction.attempts.length})
+              </summary>
+              <p className="field-help">
+                Skipped inputs do not consume calls. Accepted reductions have a
+                separate confirmation call. This is an algorithm trace, not a
+                line-by-line code trace.
+              </p>
+              <p>
+                Complexity (length, absolute-value sum including target):{" "}
+                {JSON.stringify(reduction.original_measure)} →{" "}
+                {JSON.stringify(reduction.reduced_measure)}
+              </p>
+              <ol className="attempt-list">
+                {reduction.attempts.map((attempt, index) => (
+                  <li key={index}>
+                    <strong>{attempt.decision.replaceAll("_", " ")}</strong>
+                    {" · "}
+                    {attempt.reason}
+                    {" · "}
+                    {attempt.call === null
+                      ? "Skipped"
+                      : `Call ${attempt.call} · ${attempt.elapsed_ms.toFixed(1)} ms`}
+                    <pre>{JSON.stringify(attempt.input)}</pre>
+                    {attempt.status ? (
+                      <span>
+                        {STATUS[attempt.status]} · Expected:{" "}
+                        <Output value={attempt.expected} /> · Actual:{" "}
+                        <Output value={attempt.actual} />
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            </details>
+            <div className="trace-footer">
+              {!reduction.stable
+                ? "Stability was not confirmed for this run. "
+                : ""}
+              {reduction.claim}
+            </div>
+          </section>
+        ) : null}
+      </details>
+      {hasPrompts ? (
+        <details className="model-details">
+          <summary>Copy feedback for an AI assistant (optional)</summary>
+          <section className="panel feedback-panel">
+            <div className="panel-heading">
+              <h2>
+                <Icon name="copy" /> Repair feedback for the model
+              </h2>
+              <span className="muted">Copy manually · No API calls</span>
+            </div>
+            <div className="feedback-body">
+              <div className="prompt-tabs" aria-label="Feedback condition">
+                {PROMPTS.filter((item) => report.prompts[item.id]).map(
+                  (item) => (
+                    <button
+                      key={item.id}
+                      className={activePrompt === item.id ? "active" : ""}
+                      aria-pressed={activePrompt === item.id}
+                      onClick={() => {
+                        setPrompt(item.id);
+                        setCopied(false);
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ),
+                )}
+                <button className="copy-button" onClick={copyPrompt}>
+                  <Icon name={copied ? "check" : "copy"} size={15} />{" "}
+                  {copied ? "Copied" : "Copy prompt"}
+                </button>
+              </div>
+              <textarea
+                aria-label="Repair prompt"
+                className="prompt-text"
+                readOnly
+                value={report.prompts[activePrompt]}
+              />
+              <p className="field-help">
+                Use a fresh conversation for each condition. Keep the model and
+                settings fixed, and retain all responses.
+              </p>
+            </div>
+          </section>
+        </details>
+      ) : null}
       <details className="source-details">
         <summary>Inspect the exact executed source and provenance</summary>
         <p>{report.source.provenance}</p>
@@ -478,7 +515,7 @@ function ResultPair({ record }: { record: Failure }) {
         <Output value={record.expected} />
       </div>
       <div>
-        <span>Actual</span>
+        <span>Your output</span>
         <Output value={record.actual} />
       </div>
       {record.message ? <p>{record.message}</p> : null}
