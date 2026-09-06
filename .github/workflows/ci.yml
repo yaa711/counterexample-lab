@@ -5,6 +5,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,3 +25,9 @@ jobs:
         working-directory: frontend
       - run: docker build -t counterexample-lab-runner:1 runner
       - run: LAB_DOCKER_TESTS=1 python3 -m unittest discover -s tests -v
+      - run: python3 -m benchmarks.compare --only sort-drop-last sort-control --seeds 42 --count 4 --budget 10 --output artifacts/ci-smoke.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-smoke
+          path: artifacts/ci-smoke.json

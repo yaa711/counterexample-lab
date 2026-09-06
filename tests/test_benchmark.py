@@ -62,5 +62,24 @@ class BenchmarkTests(unittest.TestCase):
             self.assertFalse(path.with_suffix('.json.tmp').exists())
 
 
+class SavedEvidenceTests(unittest.TestCase):
+    def test_saved_table_reproduces_and_fixture_hash_matches(self):
+        from benchmarks.compare import ROOT, digest
+        from benchmarks.summarize import render
+        report = json.loads((ROOT / 'benchmarks/results/pilot-2026-09-05.json').read_text())
+        self.assertTrue(report['complete'])
+        self.assertEqual(summary(report), report['summary'])
+        self.assertEqual(report['fixture_sha256'], digest(DEFAULT_FIXTURES.read_bytes()))
+        self.assertEqual(render(report), (ROOT / 'benchmarks/results/pilot-2026-09-05.md').read_text())
+        self.assertEqual(len(report['witness_checks']), len(report['candidates']))
+        for trial in report['trials']:
+            for pair in trial['paired']:
+                self.assertTrue(pair['valid'])
+                reduction = pair['reduction']
+                self.assertEqual(reduction['steps'][0]['input'], trial['discovery']['failure']['input'])
+                self.assertLessEqual(reduction['calls'], report['config']['shrink_budget'])
+                self.assertEqual(pair['audit'], reduction['reduced'])
+
+
 if __name__ == '__main__':
     unittest.main()
