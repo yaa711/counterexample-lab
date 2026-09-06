@@ -38,7 +38,22 @@ export type Failure = {
   message?: string;
 };
 export type Step = Failure & { reason: string; call: number };
+export type Attempt = {
+  input: Case;
+  reason: string;
+  decision: string;
+  call: number | null;
+  elapsed_ms: number;
+  status?: Status;
+  expected?: number | number[];
+  actual?: unknown;
+};
 export type Shrink = {
+  strategy: "single" | "block";
+  attempts: Attempt[];
+  elapsed_ms: number;
+  original_measure: [number, number];
+  reduced_measure: [number, number];
   stable: boolean;
   steps: Step[];
   calls: number;
@@ -49,6 +64,11 @@ export type Shrink = {
   evaluated_inputs: Case[];
 };
 export type Report = {
+  strategy: "single" | "block";
+  profile: "demo" | "evaluation";
+  candidate_calls: number;
+  discovery_ms: number;
+  time_to_failure_ms: number | null;
   schema_version: string;
   run_id: string;
   task: string;

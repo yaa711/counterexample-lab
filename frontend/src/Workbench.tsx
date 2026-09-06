@@ -15,6 +15,8 @@ export function Workbench({
   const [mode, setMode] = useState<"demo" | "custom">("demo");
   const [variant, setVariant] = useState<"buggy" | "correct">("buggy");
   const [code, setCode] = useState(tasks[0].buggy);
+  const [strategy, setStrategy] = useState<"single" | "block">("block");
+  const [profile, setProfile] = useState<"demo" | "evaluation">("demo");
   const [seed, setSeed] = useState("42");
   const [count, setCount] = useState("100");
   const [budget, setBudget] = useState("100");
@@ -60,6 +62,8 @@ export function Workbench({
         seed: Number(seed),
         count: Number(count),
         shrink_budget: Number(budget),
+        strategy,
+        profile,
       });
       setReport(result);
     } catch (error) {
@@ -154,13 +158,11 @@ export function Workbench({
           <div className="page-content">
             <div className="page-heading">
               <div>
-                <div className="eyebrow">SMALLER INPUT. CLEARER INSIGHT.</div>
-                <h1>
-                  Make failures explainable<span>.</span>
-                </h1>
+                <div className="eyebrow">PYTHON ALGORITHM TESTING</div>
+                <h1>Find and reduce failing inputs</h1>
                 <p>
-                  Find counterexamples, reduce the input, and see exactly where
-                  your code goes wrong.
+                  Compare expected and actual outputs, then inspect how the
+                  failing input gets smaller.
                 </p>
               </div>
               <button
@@ -311,6 +313,42 @@ export function Workbench({
                   <span className="muted mono">CONFIG</span>
                 </div>
                 <div className="config-body">
+                  <label htmlFor="strategy">Reduction strategy</label>
+                  <select
+                    id="strategy"
+                    value={strategy}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setStrategy(e.target.value as "single" | "block")
+                    }
+                  >
+                    <option value="single">
+                      Single deletion + value simplification
+                    </option>
+                    <option value="block">
+                      Block deletion + value simplification
+                    </option>
+                  </select>
+                  <p className="field-help">
+                    Both strategies use the same value transformations and
+                    failure checks.
+                  </p>
+                  <label htmlFor="profile">Input generation</label>
+                  <select
+                    id="profile"
+                    value={profile}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setProfile(e.target.value as "demo" | "evaluation")
+                    }
+                  >
+                    <option value="demo">Teaching demo</option>
+                    <option value="evaluation">Evaluation</option>
+                  </select>
+                  <p className="field-help">
+                    Evaluation uses seeded random inputs and generic boundaries,
+                    without the teaching examples.
+                  </p>
                   <label htmlFor="seed">
                     Random seed <span>SEED</span>
                   </label>

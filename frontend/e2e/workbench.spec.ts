@@ -8,7 +8,7 @@ test("demo, reduction, prompts, repair and export preserve real evidence", async
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Make failures explainable." }),
+    page.getByRole("heading", { name: "Find and reduce failing inputs" }),
   ).toBeVisible();
   await expect(
     page.getByText("Illustration only · No experiment results yet"),
@@ -102,7 +102,7 @@ test("mobile layout stays within viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Make failures explainable." }),
+    page.getByRole("heading", { name: "Find and reduce failing inputs" }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -130,7 +130,7 @@ test("the workbench, guide and errors use English only", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(
-    page.getByRole("heading", { name: "Make failures explainable." }),
+    page.getByRole("heading", { name: "Find and reduce failing inputs" }),
   ).toBeVisible();
   expect(await page.locator("body").innerText()).not.toMatch(
     /[\p{Script=Han}]/u,
@@ -156,4 +156,76 @@ test("the workbench, guide and errors use English only", async ({ page }) => {
   expect(await page.locator("body").innerText()).not.toMatch(
     /[\p{Script=Han}]/u,
   );
+});
+
+test("strategy, generator and rejected attempts match exported evidence", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Reduction strategy").selectOption("single");
+  await page.getByLabel("Input generation").selectOption("evaluation");
+  await page
+    .getByRole("button", { name: "Run experiment", exact: false })
+    .click();
+  await expect(
+    page.getByText("Wrong answer found", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByTestId("recorded-settings")).toContainText(
+    "Single deletion",
+  );
+  await expect(page.getByTestId("recorded-settings")).toContainText(
+    "Evaluation",
+  );
+  await page.getByText(/^All reduction attempts/).click();
+  await expect(page.locator(".attempt-list")).toBeVisible();
+  await expect(page.locator(".attempt-list")).toContainText("accepted");
+  await page.getByLabel("Reduction strategy").selectOption("block");
+  await expect(page.getByTestId("recorded-settings")).toContainText(
+    "Single deletion",
+  );
+  const pending = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export experiment" }).click();
+  const download = await pending;
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream!) chunks.push(chunk);
+  const report = JSON.parse(Buffer.concat(chunks).toString());
+  expect(report.strategy).toBe("single");
+  expect(report.profile).toBe("evaluation");
+  expect(report.candidate_calls).toBe(report.tested + report.shrink.calls);
+  expect(
+    report.shrink.attempts.filter(
+      (a: { call: number | null }) => a.call !== null,
+    ),
+  ).toHaveLength(report.shrink.calls);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
+  await page.screenshot({
+    path: "../artifacts/comparison-mobile.png",
+    fullPage: true,
+  });
+});
+
+test("zero reduction budget retains original feedback without inventing reduced feedback", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Reduction budget").fill("0");
+  await page
+    .getByRole("button", { name: "Run experiment", exact: false })
+    .click();
+  await expect(
+    page.getByText("Wrong answer found", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Reduced input", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("textbox", { name: "Repair prompt" }),
+  ).toHaveValue(/Expected:/);
+  await expect(page.getByText("Reduction not started")).toBeVisible();
 });

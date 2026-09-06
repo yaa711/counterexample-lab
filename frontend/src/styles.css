@@ -1706,3 +1706,41 @@ h1 > span {
     font-size: 9px;
   }
 }
+
+/* Keep detailed traces scrollable without widening the page on small screens. */
+.config-body select {
+  width: 100%;
+  min-width: 0;
+  margin: 8px 0;
+  padding: 10px 8px;
+  border: 1px solid #cbd5d1;
+  border-radius: 6px;
+  background: white;
+  color: #183a30;
+}
+.attempt-details {
+  padding: 18px;
+  border-top: 1px solid #e1e7e3;
+}
+.attempt-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.attempt-list {
+  max-height: 420px;
+  overflow: auto;
+  padding-left: 24px;
+}
+.attempt-list li {
+  padding: 12px 4px;
+  border-bottom: 1px solid #e1e7e3;
+  overflow-wrap: anywhere;
+}
+.attempt-list pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.attempt-list span {
+  font-size: 12px;
+}

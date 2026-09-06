@@ -92,8 +92,8 @@ export function Results({
         </div>
         <h2>
           {busy
-            ? "Looking for an input that tells the story\u2026"
-            : "One small counterexample. A much clearer picture."}
+            ? "Running tests\u2026"
+            : "Run an experiment to inspect a failure."}
         </h2>
         <p>
           {busy
@@ -113,10 +113,11 @@ export function Results({
   const change = originalSize
     ? Math.round((1 - finalSize / originalSize) * 100)
     : 0;
+  const activePrompt = report.prompts[prompt] ? prompt : "original";
   const hasPrompts = Object.keys(report.prompts).length > 0;
   async function copyPrompt() {
     try {
-      await navigator.clipboard.writeText(report!.prompts[prompt]);
+      await navigator.clipboard.writeText(report!.prompts[activePrompt]);
       setCopied(true);
     } catch {
       setError(
@@ -156,6 +157,15 @@ export function Results({
           {STATUS[report.status]}
         </span>
       </div>
+      <p className="evidence-note" data-testid="recorded-settings">
+        Recorded strategy:{" "}
+        {report.strategy === "single" ? "Single deletion" : "Block deletion"} +
+        value simplification
+        {" · "}Generator:{" "}
+        {report.profile === "demo" ? "Teaching demo" : "Evaluation"}
+        {" · "}Total candidate calls: {report.candidate_calls} (including
+        failure confirmations).
+      </p>
       <div className="stats-grid">
         <Metric
           label="Inputs tested"
@@ -259,6 +269,42 @@ export function Results({
               </div>
             ))}
           </div>
+          <details className="attempt-details">
+            <summary>
+              All reduction attempts ({reduction.attempts.length})
+            </summary>
+            <p className="field-help">
+              Skipped inputs do not consume calls. Accepted reductions have a
+              separate confirmation call. This is an algorithm trace, not a
+              line-by-line code trace.
+            </p>
+            <p>
+              Complexity (length, absolute-value sum including target):{" "}
+              {JSON.stringify(reduction.original_measure)} →{" "}
+              {JSON.stringify(reduction.reduced_measure)}
+            </p>
+            <ol className="attempt-list">
+              {reduction.attempts.map((attempt, index) => (
+                <li key={index}>
+                  <strong>{attempt.decision.replaceAll("_", " ")}</strong>
+                  {" · "}
+                  {attempt.reason}
+                  {" · "}
+                  {attempt.call === null
+                    ? "Skipped"
+                    : `Call ${attempt.call} · ${attempt.elapsed_ms.toFixed(1)} ms`}
+                  <pre>{JSON.stringify(attempt.input)}</pre>
+                  {attempt.status ? (
+                    <span>
+                      {STATUS[attempt.status]} · Expected:{" "}
+                      <Output value={attempt.expected} /> · Actual:{" "}
+                      <Output value={attempt.actual} />
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </details>
           <div className="trace-footer">
             {!reduction.stable
               ? "Stability was not confirmed for this run. "
@@ -277,11 +323,11 @@ export function Results({
           </div>
           <div className="feedback-body">
             <div className="prompt-tabs" aria-label="Feedback condition">
-              {PROMPTS.map((item) => (
+              {PROMPTS.filter((item) => report.prompts[item.id]).map((item) => (
                 <button
                   key={item.id}
-                  className={prompt === item.id ? "active" : ""}
-                  aria-pressed={prompt === item.id}
+                  className={activePrompt === item.id ? "active" : ""}
+                  aria-pressed={activePrompt === item.id}
                   onClick={() => {
                     setPrompt(item.id);
                     setCopied(false);
@@ -299,7 +345,7 @@ export function Results({
               aria-label="Repair prompt"
               className="prompt-text"
               readOnly
-              value={report.prompts[prompt]}
+              value={report.prompts[activePrompt]}
             />
             <p className="field-help">
               Use a fresh conversation for each condition. Keep the model and
