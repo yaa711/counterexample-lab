@@ -39,3 +39,12 @@ This is an English-only local research workbench, not a public hosted service. D
 Run relevant tests for changed modules and the frontend build when UI/types change. Real Docker checks require an installed daemon/image; report skipped tests honestly, never imply they ran. Inspect desktop/mobile UI when changing layout. Update `docs/VALIDATION.md` with actual evidence and limits, not assumptions.
 
 Use the checked-in lockfile. No external skills are required to run this project.
+
+## Reduction comparisons
+
+- Both deletion strategies share the same value transformations and confirmation rules. Count all candidate evaluations against the strategy budget.
+- Keep teaching and evaluation generation separate. Never feed benchmark witnesses or fault descriptions into discovery.
+- Benchmark candidate source always runs in Docker; there is no host execution option.
+- Keep misses, controls, incomplete runs and budget limits in saved reports. Do not infer global minimality or general performance from the pilot.
+- Browser tests start their own server; set `LAB_TEST_PORT` if port 8765 is occupied.
+- Run a smoke comparison: `python3 -m benchmarks.compare --only sort-drop-last sort-control --seeds 42 --count 4 --budget 10 --output artifacts/smoke.json`.

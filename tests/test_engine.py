@@ -1,8 +1,10 @@
 import copy
 import unittest
+import time
+from unittest.mock import patch
 
 from backend.tasks import TASKS, demo_evaluator, oracle, valid_case
-from backend.engine import discover, generate_cases, measure, verify
+from backend.engine import discover, generate_cases, measure, verify, shrink, _simplifications, check
 
 
 class EngineTests(unittest.TestCase):
@@ -44,6 +46,10 @@ class EngineTests(unittest.TestCase):
         a = discover('sort', demo_evaluator('sort', 'buggy'), 23, 100, 60)
         b = discover('sort', demo_evaluator('sort', 'buggy'), 23, 100, 60)
         self.assertEqual(a['tested_inputs'], b['tested_inputs'])
+        for run in (a, b):
+            self.assertGreaterEqual(run['shrink'].pop('elapsed_ms'), 0)
+            for attempt in run['shrink']['attempts']:
+                self.assertGreaterEqual(attempt.pop('elapsed_ms'), 0)
         self.assertEqual(a['shrink'], b['shrink'])
 
     def test_coordinated_simplification_keeps_duplicate_relationship(self):
@@ -90,6 +96,72 @@ class EngineTests(unittest.TestCase):
         run = discover('sort', flaky, 42, 100, 80)
         self.assertFalse(run['shrink']['stable'])
         self.assertEqual(run['shrink']['stop_reason'], 'unstable_failure')
+
+    def test_strategies_preserve_invariants_across_evaluation_seeds(self):
+        for task in TASKS:
+            for seed in range(12):
+                for strategy in ('single', 'block'):
+                    run = discover(task, demo_evaluator(task, 'buggy'), seed, 100, 60,
+                                   strategy=strategy, profile='evaluation')
+                    if run['shrink'] is None:
+                        continue
+                    reduced = run['shrink']
+                    self.assertLessEqual(reduced['calls'], 60)
+                    self.assertEqual(run['candidate_calls'], run['tested'] + reduced['calls'])
+                    self.assertEqual(reduced['calls'], sum(a['call'] is not None for a in reduced['attempts']))
+                    self.assertEqual(run['tested'], len(run['tested_inputs']))
+                    self.assertTrue(valid_case(task, reduced['reduced']['input']))
+                    self.assertEqual(check(task, demo_evaluator(task, 'buggy'), reduced['reduced']['input'])['status'], 'wrong_answer')
+                    for before, after in zip(reduced['steps'], reduced['steps'][1:]):
+                        self.assertLess(measure(after['input']), measure(before['input']))
+                    result = verify(task, demo_evaluator(task, 'correct'), run, 20)
+                    self.assertEqual(result['overlap_count'], 0)
+                    self.assertEqual(result['status'], 'passed')
+
+    def test_both_strategies_share_value_simplifications(self):
+        case = {'numbers': [8, -4, 2, 1], 'target': 2}
+        single = list(_simplifications(case, 'single'))
+        block = list(_simplifications(case, 'block'))
+        values = lambda items: [(c, why) for c, why in items if not why.startswith('Remove')]
+        self.assertEqual(values(single), values(block))
+        self.assertTrue(all('Remove 1 element' in why for _, why in single if why.startswith('Remove')))
+        self.assertTrue(any('Remove 2 element' in why for _, why in block))
+
+    def test_rejected_and_skipped_attempts_are_explained(self):
+        run = discover('max_subarray', demo_evaluator('max_subarray', 'buggy'), 42, 100, 100)
+        attempts = run['shrink']['attempts']
+        self.assertTrue(any(a['decision'] == 'invalid_input' and a['call'] is None for a in attempts))
+        self.assertTrue(any(a['decision'] == 'rejected' and a['status'] == 'passed' for a in attempts))
+        self.assertEqual(sum(a['decision'] == 'accepted' for a in attempts), len(run['shrink']['steps']) - 1)
+
+    def test_budget_cannot_accept_unconfirmed_proposal(self):
+        evaluator = demo_evaluator('sort', 'buggy')
+        failure = check('sort', evaluator, {'numbers': [1, 1, 2, 2]})
+        result = shrink('sort', evaluator, failure, 3, time.monotonic() + 10)
+        self.assertEqual(result['stop_reason'], 'budget_exhausted')
+        self.assertEqual(len(result['steps']), 1)
+        self.assertEqual(result['attempts'][-1]['decision'], 'unconfirmed')
+
+    def test_deadline_and_zero_budget_do_not_evaluate(self):
+        failure = check('sort', demo_evaluator('sort', 'buggy'), {'numbers': [1, 1]})
+        for budget, deadline, reason in [(0, time.monotonic()+10, 'budget_exhausted'),
+                                         (10, time.monotonic()-1, 'time_limit')]:
+            with patch('backend.engine.check') as evaluate:
+                result = shrink('sort', None, failure, budget, deadline)
+                evaluate.assert_not_called()
+                self.assertEqual(result['stop_reason'], reason)
+                self.assertFalse(result['stable'])
+
+    def test_evaluation_profile_is_reproducible_without_teaching_prefix(self):
+        for task in TASKS:
+            cases = generate_cases(task, 42, 40, profile='evaluation')
+            self.assertEqual(cases, generate_cases(task, 42, 40, profile='evaluation'))
+            self.assertNotEqual(cases[0], generate_cases(task, 42, 1)[0])
+            self.assertTrue(all(valid_case(task, case) for case in cases))
+        with self.assertRaises(ValueError):
+            generate_cases('sort', 0, 10, profile='unknown')
+        with self.assertRaises(ValueError):
+            discover('sort', None, 0, 10, 10, strategy='unknown')
 
 
 if __name__ == '__main__':

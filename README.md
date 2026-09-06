@@ -73,6 +73,23 @@ The result depends on the available transformations and the execution budget. It
 
 The reference implementations favor simplicity. For example, the maximum-subarray oracle checks every non-empty subarray instead of reusing the candidate's dynamic-programming recurrence. This helps avoid repeating the same mistake on both sides of a test.
 
+## Compare reduction strategies
+
+The settings panel offers single-element deletion and block deletion. Both use the same value simplification and failure-confirmation rules. Choose **Evaluation** to generate seeded inputs without the long teaching examples. The result records the strategy actually executed, even if you change the settings afterward.
+
+Expand **All reduction attempts** to inspect accepted proposals, rejected outputs, skipped inputs, and confirmation calls. The trace also records complexity before and after reduction. It describes the reducer's decisions, not individual lines of candidate code.
+
+For a paired comparison from the same initial failure, use the Docker benchmark:
+
+```sh
+python3 -m benchmarks.compare --seeds 7 42 --count 12 --budget 30 --seconds 90 --output artifacts/comparison.json
+python3 -m benchmarks.summarize artifacts/comparison.json
+```
+
+The first pilot found failures in 16 of 18 faulty-program/seed trials; six correct-control trials passed. Across the 16 audited pairs, single deletion used 317 reduction calls and block deletion used 265. Some runs exhausted the budget, and one faulty program was missed under both seeds. This is a small hand-written fixture set, not a general performance benchmark.
+
+See the [method, limitations, and raw results](benchmarks/README.md) before interpreting the numbers.
+
 ## Checking a repair
 
 After finding a failure, the interface prepares three kinds of feedback:
@@ -140,3 +157,5 @@ npm run test:e2e
 - `frontend/src/`: the React and TypeScript interface.
 - `runner/`: the container image and candidate worker.
 - `tests/` and `frontend/e2e/`: backend and browser tests.
+
+- `benchmarks/`: fault fixtures, Docker-only paired experiments, and saved pilot results.

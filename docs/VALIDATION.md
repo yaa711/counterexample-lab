@@ -38,3 +38,11 @@ No real model-repair experiment has been performed. All displayed demo candidate
 ## Release checks
 
 The release archive includes tracked source plus the compiled frontend. It excludes Git metadata, dependency folders, Python caches and local experiment outputs. Rebuild after source changes before repackaging. Detailed validation of the final archive is recorded in the delivery message.
+
+## Reduction comparison update
+
+The strategy comparison update passed 40 Python tests with `LAB_DOCKER_TESTS=1` and no skips (21.9 seconds), including API validation, strategy invariants across seeds, benchmark pairing, and real container isolation checks. TypeScript checking and the Vite production build passed. Six headless Chrome/Playwright tests passed, covering recorded strategy/profile, complete attempt export, a zero reduction budget, the original repair workflow, and mobile layout. Desktop and 390px screenshots were inspected; the README's original screenshot was retained unchanged.
+
+A Docker-only pilot completed all 24 planned trials. It reproduced all 12 declared fixture witnesses, discovered 16/18 buggy trials, passed all six correct-control trials, and independently audited both reductions in every discovered pair. The raw evidence and limitations are in `benchmarks/README.md`. These numbers are not a model-repair result or a claim about real-world bug distributions.
+
+The browser test server now uses a dedicated port and refuses to reuse an existing server. This prevents a stale local checkout from accidentally satisfying the browser suite. CI also runs a two-program Docker benchmark smoke test and uploads its report.
