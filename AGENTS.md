@@ -53,4 +53,4 @@ Use the checked-in lockfile. No external skills are required to run this project
 
 - Default flow: write code, inspect a small failing input, edit the failed source, and check the fix. Keep research settings collapsed.
 - Regression checks of displayed failures are reported separately from unseen-input counts. Never label exposed inputs as held out.
-- Preserve the original README screenshot and its reference when updating branding.
+- README screenshots must show the current interface. Refresh them with the documented demo capture command after UI changes.

@@ -26,7 +26,7 @@ When shrinking is unstable, incomplete or infrastructure-limited, record that fa
 
 ## Validation
 
-Paste the returned function in the repair panel and validate it using Docker. Each condition tied to the same discovery run uses the same independent test suite for comparability. Verification excludes discovery and reduction inputs. This version runs a fixed derived seed; repeated verification is not a new test set. Do not iteratively tune repairs against it.
+Open **Copy feedback for an AI assistant** to get the feedback prompts. Paste the returned function under **Edit your fix**, then click **Check your fix** using Docker. Each condition tied to the same discovery run uses the same independent test suite for comparability. The unseen test set excludes discovery and reduction inputs. The displayed failure is checked separately in `regression` and must not be included in unseen test counts. This version runs a fixed derived seed; repeated verification is not a new test set. Do not iteratively tune repairs against it.
 
 After running a condition, export its report immediately (the UI retains only the latest verification result). Give each export a distinct filename. Keep the original model response separately. A report becoming stale after a restart requires replaying discovery with exactly the same source and settings.
 

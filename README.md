@@ -4,7 +4,7 @@ Find My Bug helps you find a small input that your Python code gets wrong. Compa
 
 It currently supports three practice problems: sorting, binary search, and maximum subarray. Built-in examples work without Docker; running your own code needs Docker.
 
-![Counterexample Lab workbench](docs/images/workbench.png)
+![Find My Bug: choose a Python problem and find a failing case](docs/images/workbench.png)
 
 ## An example
 
@@ -18,6 +18,19 @@ def solve(numbers):
 For `[0, 0]`, the expected result is `[0, 0]`. The function returns `[0]`.
 
 The sorting demo uses this bug to show how reduction works. Removing either element makes the test pass, so the remaining pair makes the problem easy to explain.
+
+Below, **Show a working example** checks `sorted(numbers)`: the old failing input passes, along with 100 unseen inputs. This is a built-in demonstration, not a claim that every input will pass.
+
+![Find My Bug: the duplicate-removal failure and a checked working example](docs/images/check-fix.png)
+
+<details>
+<summary>See the same demo on a narrow screen</summary>
+
+<img src="docs/images/mobile.png" alt="Find My Bug failing case and fix check at mobile width" width="354">
+
+</details>
+
+See the [demo walkthrough](docs/DEMO.md) to reproduce these screens.
 
 This duplicate-removal example also appears in the [Hypothesis README](https://github.com/HypothesisWorks/hypothesis#readme). Find My Bug implements its own task-specific test generation and reduction logic.
 
@@ -144,6 +157,8 @@ cd frontend
 npx playwright install chromium
 npm run test:e2e
 ```
+
+To build a ZIP with source and the compiled interface, run `python3 scripts/package.py` after building the frontend. The output is `artifacts/find-my-bug.zip`.
 
 ## Code layout
 

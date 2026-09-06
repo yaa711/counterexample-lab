@@ -31,7 +31,7 @@ docker build -t counterexample-lab-runner:1 runner
 LAB_DOCKER_TESTS=1 python3 -m unittest discover -s tests -v
 ```
 
-The checked-in GitHub Actions workflow also includes a Docker stage. See [GitHub Actions](https://github.com/yaa711/counterexample-lab/actions) for results associated with each commit; the local checks recorded above are separate from those runs.
+The checked-in GitHub Actions workflow also includes a Docker stage. See [GitHub Actions](https://github.com/yaa711/find-my-bug/actions) for results associated with each commit; the local checks recorded above are separate from those runs.
 
 No real model-repair experiment has been performed. All displayed demo candidates are explicitly hand-authored teaching examples. Correct-example validation proves the application workflow on these tests, not a research finding about model performance.
 
@@ -53,3 +53,7 @@ The browser test server now uses a dedicated port and refuses to reuse an existi
 - Frontend: TypeScript/Vite build passed; six browser tests passed, covering collapsed settings, retained repair drafts, working-example checks, exports, error states, and mobile overflow. Desktop and 390px mobile screenshots were inspected locally.
 - README image and its reference are unchanged. Existing pilot results are retained, not rerun or relabeled.
 - This validates the implementation, not its usefulness to beginners. No user study has been conducted yet.
+
+## Refreshed demonstration — 2026-09-06
+
+The earlier notes about retaining the original screenshot describe previous revisions. The README now uses new captures of Find My Bug's current interface: the starting page, a real duplicate-removal failure followed by the built-in working-example check, and the same results at mobile width. All three images were visually inspected. The opt-in capture passed against the live local backend (1 test, 2.5 seconds), including the previous failure and 100 unseen-input checks. The frontend build passed. No benchmark measurements were changed.
