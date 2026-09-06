@@ -9,14 +9,18 @@ import time
 
 from .tasks import oracle, valid_case, valid_output
 
-GENERATOR_VERSION = '1.0'
+GENERATOR_VERSION = '2.0'
+STRATEGIES = ('single', 'block')
+PROFILES = ('demo', 'evaluation')
 
 
 def key(case):
     return json.dumps(case, sort_keys=True, separators=(',', ':'))
 
 
-def generate_cases(task, seed, count, excluded=()):
+def generate_cases(task, seed, count, excluded=(), profile='demo'):
+    if profile not in PROFILES:
+        raise ValueError('Unknown generator profile')
     # A private generator makes a run replayable without changing global RNG state.
     # Boundary cases expose known classes of bugs; random cases broaden coverage.
     rng = random.Random(seed)
@@ -25,18 +29,25 @@ def generate_cases(task, seed, count, excluded=()):
         'first_index': [[-4, -1, 2, 2, 2, 2, 2, 6, 9], [], [0], [0, 0], [-1, 0, 1]],
         'max_subarray': [[-8, -3, -6, -2, -5, -4, -9, -1], [0], [-1], [1], [-2, 3, -1, 4, -8]],
     }[task]
+    if profile == 'evaluation':
+        # Evaluation never uses the long, bug-specific teaching examples.
+        # Start with seeded random cases; add generic boundaries after ten draws.
+        edges = [[], [0], [-1], [1], [0, 0]]
+        if task == 'max_subarray':
+            edges = edges[1:]
     seen = set(excluded)
     result = []
     for attempt in range(count * 40 + len(edges)):
         if len(result) >= count:
             break
-        numbers = edges[attempt][:] if attempt < len(edges) else [
+        edge_index = attempt if profile == 'demo' else attempt - 10
+        numbers = edges[edge_index][:] if 0 <= edge_index < len(edges) else [
             rng.randint(-12, 12) for _ in range(rng.randint(1 if task == 'max_subarray' else 0, 16))]
         if task == 'first_index':
             numbers.sort()
         case = {'numbers': numbers}
         if task == 'first_index':
-            case['target'] = 2 if attempt == 0 else (
+            case['target'] = 2 if profile == 'demo' and attempt == 0 else (
                 rng.choice(numbers) if numbers and rng.random() < .65 else rng.randint(-12, 12))
         identity = key(case)
         if identity not in seen:
@@ -65,9 +76,11 @@ def check(task, evaluator, case):
     return {**record, 'status': 'passed' if result['value'] == expected else 'wrong_answer'}
 
 
-def _simplifications(case):
+def _simplifications(case, strategy='block'):
+    if strategy not in STRATEGIES:
+        raise ValueError('Unknown reduction strategy')
     numbers = case['numbers']
-    size = max(1, len(numbers) // 2)
+    size = 1 if strategy == 'single' else max(1, len(numbers) // 2)
     yielded = set()
     while size >= 1:
         for start in range(0, len(numbers), size):
@@ -97,42 +110,62 @@ def _simplifications(case):
             yield {**case, 'target': target}, f"Target: {case['target']} → {target}"
 
 
-def shrink(task, evaluator, failure, budget, deadline):
+def shrink(task, evaluator, failure, budget, deadline, strategy='block'):
+    if strategy not in STRATEGIES:
+        raise ValueError('Unknown reduction strategy')
+    if failure['status'] != 'wrong_answer' or not valid_case(task, failure['input']):
+        raise ValueError('Reduction requires a valid wrong-answer input')
+    started = time.monotonic()
+    attempts = []
     current = failure
     steps = [{**failure, 'reason': 'Original input', 'call': 0}]
     evaluated = []
     stable = False
     stop_reason = 'local_fixed_point'
 
-    def evaluate(case):
+    def evaluate(case, reason, decision):
         if len(evaluated) >= budget:
             raise StopIteration('budget_exhausted')
         if time.monotonic() >= deadline:
             raise StopIteration('time_limit')
         evaluated.append(copy.deepcopy(case))
-        return check(task, evaluator, case)
+        before = time.monotonic()
+        result = check(task, evaluator, case)
+        attempts.append({**result, 'reason': reason, 'decision': decision,
+                         'call': len(evaluated),
+                         'elapsed_ms': round((time.monotonic() - before) * 1000, 3)})
+        return result
 
     try:
         # Recheck twice before using the original error as an experimental witness.
         for _ in range(2):
-            repeat = evaluate(current['input'])
+            repeat = evaluate(current['input'], 'Confirm original failure', 'confirmation')
             if repeat != failure:
+                attempts[-1]['decision'] = 'unstable'
                 raise StopIteration('unstable_failure')
         stable = True
         while True:
             improved = False
-            for candidate, reason in _simplifications(current['input']):
+            for candidate, reason in _simplifications(current['input'], strategy):
                 if not valid_case(task, candidate) or measure(candidate) >= measure(current['input']):
+                    attempts.append({'input': copy.deepcopy(candidate), 'reason': reason,
+                                     'decision': 'invalid_input' if not valid_case(task, candidate) else 'not_smaller',
+                                     'call': None, 'elapsed_ms': 0})
                     continue
-                result = evaluate(candidate)
+                result = evaluate(candidate, reason, 'rejected')
                 if result['status'] == 'infrastructure_error':
                     raise StopIteration('infrastructure_error')
                 if result['status'] != 'wrong_answer':
                     continue
                 # A one-off random error must not be accepted as a stable reduction.
-                repeat = evaluate(candidate)
+                proposal = attempts[-1]
+                proposal['decision'] = 'unconfirmed'
+                repeat = evaluate(candidate, 'Confirm proposed reduction', 'confirmation')
                 if repeat != result:
+                    proposal['decision'] = 'unstable'
+                    attempts[-1]['decision'] = 'unstable'
                     raise StopIteration('unstable_failure')
+                proposal['decision'] = 'accepted'
                 current = result
                 steps.append({**result, 'reason': reason, 'call': len(evaluated)})
                 improved = True
@@ -143,16 +176,21 @@ def shrink(task, evaluator, failure, budget, deadline):
                 break
     except StopIteration as stopped:
         stop_reason = str(stopped)
-    return {'stable': stable and stop_reason != 'unstable_failure', 'steps': steps,
+    return {'strategy': strategy, 'attempts': attempts,
+            'elapsed_ms': round((time.monotonic() - started) * 1000, 3),
+            'original_measure': measure(failure['input']), 'reduced_measure': measure(current['input']),
+            'stable': stable and stop_reason != 'unstable_failure', 'steps': steps,
             'calls': len(evaluated), 'evaluated_inputs': evaluated, 'budget': budget,
             'stop_reason': stop_reason, 'reduced': current,
             'claim': 'Locally reduced, not guaranteed globally minimal. More reduction may be possible if the budget or time limit was reached.'}
 
 
-def discover(task, evaluator, seed, count, shrink_budget, seconds=50):
+def discover(task, evaluator, seed, count, shrink_budget, seconds=50, strategy='block', profile='demo'):
+    if strategy not in STRATEGIES:
+        raise ValueError('Unknown reduction strategy')
     started = time.monotonic()
     deadline = started + seconds
-    cases = generate_cases(task, seed, count)
+    cases = generate_cases(task, seed, count, profile=profile)
     tested_inputs = []
     failure = None
     status = 'passed'
@@ -166,10 +204,14 @@ def discover(task, evaluator, seed, count, shrink_budget, seconds=50):
             failure = record
             status = record['status']
             break
-    reduction = shrink(task, evaluator, failure, shrink_budget, deadline) if status == 'wrong_answer' else None
+    discovery_ms = round((time.monotonic() - started) * 1000, 3)
+    reduction = shrink(task, evaluator, failure, shrink_budget, deadline, strategy) if status == 'wrong_answer' and shrink_budget > 0 else None
     if failure is None and len(tested_inputs) < count:
         status = 'incomplete'
-    return {'task': task, 'seed': seed, 'requested': count, 'tested': len(tested_inputs),
+    return {'task': task, 'seed': seed, 'strategy': strategy, 'profile': profile,
+            'discovery_ms': discovery_ms, 'time_to_failure_ms': discovery_ms if failure else None,
+            'candidate_calls': len(tested_inputs) + (reduction['calls'] if reduction else 0),
+            'requested': count, 'tested': len(tested_inputs),
             'generator_version': GENERATOR_VERSION, 'generator': {'max_length': 16, 'value_range': [-12, 12], 'deduplicated': True},
             'status': status, 'tested_inputs': tested_inputs, 'failure': failure,
             'shrink': reduction, 'elapsed_ms': round((time.monotonic() - started) * 1000, 2)}
@@ -185,7 +227,7 @@ def verify(task, evaluator, discovery, count, seconds=50):
     if discovery['shrink']:
         excluded += discovery['shrink']['evaluated_inputs']
     excluded_keys = {key(c) for c in excluded}
-    cases = generate_cases(task, seed, count, excluded_keys)
+    cases = generate_cases(task, seed, count, excluded_keys, profile=discovery.get('profile', 'demo'))
     records = []
     for case in cases:
         if time.monotonic() - started >= seconds:

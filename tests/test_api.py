@@ -40,6 +40,17 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(result['status'], 'passed')
         self.assertEqual(result['overlap_count'], 0)
 
+    def test_strategy_profile_and_zero_reduction_budget(self):
+        status, report = self.request('/api/run', {'task': 'sort', 'strategy': 'single', 'profile': 'evaluation'})
+        self.assertEqual(status, 200)
+        self.assertEqual(report['strategy'], 'single')
+        self.assertEqual(report['profile'], 'evaluation')
+        self.assertEqual(report['shrink']['strategy'], 'single')
+        status, report = self.request('/api/run', {'task': 'sort', 'shrink_budget': 0})
+        self.assertEqual(status, 200)
+        self.assertIsNone(report['shrink'])
+        self.assertEqual(report['candidate_calls'], report['tested'])
+
     def test_forbidden_origin(self):
         self.assertEqual(self.request('/api/run', {'task': 'sort'}, {'Origin': 'https://evil.example'})[0], 403)
 
@@ -47,7 +58,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request('/api/tasks', headers={'Host': 'evil.example'})[0], 403)
 
     def test_invalid_requests(self):
-        for data in [{'task': 'missing'}, {'task': []}, {'task': 'sort', 'seed': True}, {'task': 'sort', 'count': 501}]:
+        for data in [{'task': 'missing'}, {'task': []}, {'task': 'sort', 'seed': True}, {'task': 'sort', 'count': 501}, {'task': 'sort', 'strategy': 'invalid'}, {'task': 'sort', 'profile': []}]:
             self.assertEqual(self.request('/api/run', data)[0], 400)
         self.assertEqual(self.request('/api/run', raw='{')[0], 400)
         self.assertEqual(self.request('/api/run', raw='x' * 65537)[0], 413)

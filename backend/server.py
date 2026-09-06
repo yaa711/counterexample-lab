@@ -11,7 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from .engine import discover, verify
+from .engine import PROFILES, STRATEGIES, discover, verify
 from .execution import docker_evaluator, readiness
 from .reports import prompts, source_record, timestamp
 from .tasks import TASKS, catalog, demo_evaluator
@@ -163,9 +163,13 @@ class Handler(BaseHTTPRequestHandler):
                     raise RequestError('Unknown problem.')
                 seed = integer(data, 'seed', 42, 0, 2**32 - 1)
                 budget = integer(data, 'shrink_budget', 100, 0, 500)
+                strategy = data.get('strategy', 'block')
+                profile = data.get('profile', 'demo')
+                if strategy not in STRATEGIES or profile not in PROFILES:
+                    raise RequestError('Unknown strategy or generator profile.')
                 evaluate, source = candidate(data, task)
-                report = discover(task, evaluate, seed, count, budget)
-                report.update({'schema_version': '1.0', 'run_id': uuid.uuid4().hex,
+                report = discover(task, evaluate, seed, count, budget, strategy=strategy, profile=profile)
+                report.update({'schema_version': '1.1', 'run_id': uuid.uuid4().hex,
                                'created_at': timestamp(), 'source': source})
                 report['prompts'] = prompts(report)
                 self.server.remember(report)

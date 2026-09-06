@@ -20,7 +20,10 @@ def prompts(report):
               f"Contract: {task['signature']}\n{task['description']}\n"
               f"Candidate:\n```python\n{report['source']['code']}\n```\n")
     result = {'failure_only': common + 'Feedback: the implementation failed a correctness test.\n'}
-    for name, record in [('original', report['failure']), ('reduced', report['shrink']['reduced'])]:
+    records = [('original', report['failure'])]
+    if report['shrink'] and report['shrink']['stable']:
+        records.append(('reduced', report['shrink']['reduced']))
+    for name, record in records:
         result[name] = common + ('Feedback: the implementation failed a correctness test.\n'
                                 f"Input: {json.dumps(record['input'], ensure_ascii=False)}\n"
                                 f"Expected: {json.dumps(record['expected'])}\n"
