@@ -13,7 +13,7 @@ def main():
     tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
     files = {ROOT / p for p in tracked if p}
     files.update(p for p in dist.rglob('*') if p.is_file())
-    output = ROOT / 'artifacts/counterexample-lab.zip'
+    output = ROOT / 'artifacts/find-my-bug.zip'
     output.parent.mkdir(exist_ok=True)
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for file in sorted(files):
@@ -23,7 +23,7 @@ def main():
             if any(part in {'.git', 'node_modules', '__pycache__', '.venv', 'artifacts', 'test-results'}
                    or part.startswith('.env') for part in relative.parts):
                 continue
-            archive.write(file, Path('counterexample-lab') / relative)
+            archive.write(file, Path('find-my-bug') / relative)
     print(f'{output} ({output.stat().st_size:,} bytes)')
 
 

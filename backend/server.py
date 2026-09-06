@@ -197,11 +197,11 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Counterexample Lab local server')
+    parser = argparse.ArgumentParser(description='Find My Bug local server')
     parser.add_argument('--port', type=int, default=8765)
     args = parser.parse_args()
     server = LabServer(('127.0.0.1', args.port))
-    print(f'Counterexample Lab → http://127.0.0.1:{args.port}', flush=True)
+    print(f'Find My Bug → http://127.0.0.1:{args.port}', flush=True)
     print('Built-in demos ready. Custom code requires Docker. Ctrl+C to stop.', flush=True)
     try:
         server.serve_forever()
