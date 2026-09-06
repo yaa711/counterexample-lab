@@ -1,0 +1,265 @@
+{
+  "schema_version": "1.0",
+  "candidates": [
+    {
+      "id": "sort-deduplicate",
+      "task": "sort",
+      "kind": "buggy",
+      "source": "Hand-written fault fixture for this project; not sampled from a model or production code.",
+      "code": "def solve(numbers):\n    return sorted(set(numbers))\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            3,
+            1,
+            3
+          ]
+        },
+        "expected": [
+          1,
+          3,
+          3
+        ],
+        "actual": [
+          1,
+          3
+        ]
+      },
+      "reason": "Converting to a set loses multiplicity; this teaching example also appears in the Hypothesis README."
+    },
+    {
+      "id": "sort-drop-last",
+      "task": "sort",
+      "kind": "buggy",
+      "source": "Hand-written fault fixture for this project; not sampled from a model or production code.",
+      "code": "def solve(numbers):\n    return sorted(numbers[:-1])\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            3,
+            1,
+            2
+          ]
+        },
+        "expected": [
+          1,
+          2,
+          3
+        ],
+        "actual": [
+          1,
+          3
+        ]
+      },
+      "reason": "Excludes the final input element."
+    },
+    {
+      "id": "sort-one-pass",
+      "task": "sort",
+      "kind": "buggy",
+      "source": "Hand-written fault fixture for this project; not sampled from a model or production code.",
+      "code": "def solve(numbers):\n    a = numbers[:]\n    for i in range(len(a)-1):\n        if a[i] > a[i+1]:\n            a[i], a[i+1] = a[i+1], a[i]\n    return a\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            3,
+            2,
+            1
+          ]
+        },
+        "expected": [
+          1,
+          2,
+          3
+        ],
+        "actual": [
+          2,
+          1,
+          3
+        ]
+      },
+      "reason": "One bubble-sort pass does not fully sort the list."
+    },
+    {
+      "id": "search-any-match",
+      "task": "first_index",
+      "kind": "buggy",
+      "source": "Hand-written fault fixture for this project; not sampled from a model or production code.",
+      "code": "def solve(numbers, target):\n    lo, hi = 0, len(numbers) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if numbers[mid] == target:\n            return mid\n        if numbers[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            1,
+            1,
+            1
+          ],
+          "target": 1
+        },
+        "expected": 0,
+        "actual": 1
+      },
+      "reason": "Stops at any equal element instead of the first."
+    },
+    {
+      "id": "search-skip-last",
+      "task": "first_index",
+      "kind": "buggy",
+      "source": "Hand-written fault fixture for this project; not sampled from a model or production code.",
+      "code": "def solve(numbers, target):\n    for i in range(len(numbers)-1):\n        if numbers[i] == target:\n            return i\n    return -1\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            1,
+            2,
+            3
+          ],
+          "target": 3
+        },
+        "expected": 2,
+        "actual": -1
+      },
+      "reason": "Never checks the last index."
+    },
+    {
+      "id": "search-insertion",
+      "task": "first_index",
+      "kind": "buggy",
+      "source": "Hand-written fault fixture for this project; not sampled from a model or production code.",
+      "code": "def solve(numbers, target):\n    import bisect\n    return bisect.bisect_left(numbers, target)\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            1,
+            3
+          ],
+          "target": 2
+        },
+        "expected": -1,
+        "actual": 1
+      },
+      "reason": "Returns an insertion position even when the target is absent."
+    },
+    {
+      "id": "subarray-empty",
+      "task": "max_subarray",
+      "kind": "buggy",
+      "source": "Hand-written fault fixture for this project; not sampled from a model or production code.",
+      "code": "def solve(numbers):\n    best = current = 0\n    for number in numbers:\n        current = max(number, current + number)\n        best = max(best, current)\n    return best\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            -4,
+            -2,
+            -3
+          ]
+        },
+        "expected": -2,
+        "actual": 0
+      },
+      "reason": "Zero initialization admits an empty subarray."
+    },
+    {
+      "id": "subarray-skip-last",
+      "task": "max_subarray",
+      "kind": "buggy",
+      "source": "Hand-written fault fixture for this project; not sampled from a model or production code.",
+      "code": "def solve(numbers):\n    best = current = numbers[0]\n    for n in numbers[1:-1]:\n        current = max(n, current+n)\n        best = max(best, current)\n    return best\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            -2,
+            5
+          ]
+        },
+        "expected": 5,
+        "actual": -2
+      },
+      "reason": "The recurrence never processes the last element."
+    },
+    {
+      "id": "subarray-total",
+      "task": "max_subarray",
+      "kind": "buggy",
+      "source": "Hand-written fault fixture for this project; not sampled from a model or production code.",
+      "code": "def solve(numbers):\n    return sum(numbers)\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            -2,
+            5,
+            -1
+          ]
+        },
+        "expected": 5,
+        "actual": 2
+      },
+      "reason": "Returns the whole-array sum instead of the best contiguous sum."
+    },
+    {
+      "id": "sort-control",
+      "task": "sort",
+      "kind": "control",
+      "source": "Fixed reference control written for this project.",
+      "code": "def solve(numbers):\n    return sorted(numbers)\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            2,
+            1,
+            2
+          ]
+        },
+        "expected": [
+          1,
+          2,
+          2
+        ],
+        "actual": [
+          1,
+          2,
+          2
+        ]
+      },
+      "reason": "Correct implementation control; finite passing tests are not a proof."
+    },
+    {
+      "id": "first_index-control",
+      "task": "first_index",
+      "kind": "control",
+      "source": "Fixed reference control written for this project.",
+      "code": "def solve(numbers, target):\n    lo, hi = 0, len(numbers)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if numbers[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid\n    return lo if lo < len(numbers) and numbers[lo] == target else -1\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            1,
+            1,
+            3
+          ],
+          "target": 1
+        },
+        "expected": 0,
+        "actual": 0
+      },
+      "reason": "Correct implementation control; finite passing tests are not a proof."
+    },
+    {
+      "id": "max_subarray-control",
+      "task": "max_subarray",
+      "kind": "control",
+      "source": "Fixed reference control written for this project.",
+      "code": "def solve(numbers):\n    best = current = numbers[0]\n    for number in numbers[1:]:\n        current = max(number, current + number)\n        best = max(best, current)\n    return best\n",
+      "witness": {
+        "input": {
+          "numbers": [
+            -2,
+            5,
+            -1
+          ]
+        },
+        "expected": 5,
+        "actual": 5
+      },
+      "reason": "Correct implementation control; finite passing tests are not a proof."
+    }
+  ]
+}
